@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Finance Tracker - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, sans-serif; line-height: 1.2; background: #f0f2f5; padding: 8px; font-size: 11px; }
+        .container { max-width: 950px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); overflow: hidden; }
+        header { background: #1e293b; color: white; text-align: center; padding: 10px; }
+        .tables-container { display: flex; flex-wrap: wrap; padding: 10px; gap: 10px; }
+        .table-section { flex: 1; min-width: 300px; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px; }
+        h2 { font-size: 0.85rem; margin-bottom: 6px; display: flex; align-items: center; gap: 4px; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { font-size: 0.6rem; text-transform: uppercase; color: #888; padding: 3px; text-align: left; border-bottom: 2px solid #eee; }
+        td { padding: 2px 1px; border-bottom: 1px solid #f9f9f9; }
+        input { width: 100%; padding: 3px 5px; border: 1px solid #ddd; border-radius: 3px; font-size: 0.85rem; height: 24px; font-family: monospace; }
+        .num-input { text-align: right; }
+        .remove-btn { background: none; border: none; cursor: pointer; color: #ff6b6b; font-size: 0.9rem; width: 100%; display: flex; justify-content: center; }
+        .add-row { background: #4361ee; color: white; border: none; padding: 4px; border-radius: 3px; cursor: pointer; font-size: 0.7rem; width: 100%; margin-top: 5px; }
+        .summary-section { padding: 10px; background: #0f172a; color: white; }
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .summary-card { background: rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 4px; text-align: center; }
+        .summary-value { font-size: 0.95rem; font-weight: 700; font-family: monospace; }
+        .row-rem { text-align: right; padding-right: 5px; font-family: monospace; font-weight: bold; font-size: 0.9rem; }
+        .over-budget-text { color: #ff6b6b; }
+        .under-budget-text { color: #4ade80; }
+        .surplus { color: #4ade80; }
+        .deficit { color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header><h1>Finance Tracker Cloud</h1></header>
+        <div class="tables-container">
+            <section class="table-section">
+                <h2 style="color: #f72585;">💸 Expenses</h2>
+                <table id="expenses-table">
+                    <thead><tr><th style="width:35%">Item</th><th style="width:22%">Spent</th><th style="width:22%">Goal</th><th style="width:16%">Left</th><th style="width:5%"></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <button id="btn-add-exp" class="add-row">+ Add Expense</button>
+            </section>
+            <section class="table-section">
+                <h2 style="color: #4cc9f0;">💰 Income</h2>
+                <table id="income-table">
+                    <thead><tr><th style="width:35%">Source</th><th style="width:55%">Amount</th><th style="width:10%"></th></tr></thead>
+                    <tbody></tbody>
+                </table>
+                <button id="btn-add-inc" class="add-row">+ Add Income</button>
+            </section>
+        </div>
+        <section class="summary-section">
+            <div class="summary-grid">
+                <div class="summary-card"><span>Income</span><div class="summary-value" id="total-income">0</div></div>
+                <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div>
+                <div class="summary-card"><span>Left</span><div class="summary-value" id="total-remaining">0</div></div>
+                <div class="summary-card"><span>Balance</span><div class="summary-value" id="net-balance">0</div></div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const SB_URL = 'https://phxncuxuyjaylfgivpmf.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoeG5jdXh1eWpheWxmZ2l2cG1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5OTY4MzAsImV4cCI6MjA4NTU3MjgzMH0.uPZTokMuCsZQLl1anqckbUcCQxDRTNsJ9SAvQ5VBBLQ';
+        
+        // Rename connection to 'db' to avoid conflict with the library 'supabase'
+        const db = supabase.createClient(SB_URL, SB_KEY);
+
+        const fmt = (n) => Math.round(n).toLocaleString();
+        const parse = (s) => parseFloat(String(s).replace(/,/g, '')) || 0;
+
+        async function loadData() {
+            const { data: exp } = await db.from('expenses').select('*').order('created_at');
+            const { data: inc } = await db.from('income').select('*').order('created_at');
+            
+            document.querySelector('#expenses-table tbody').innerHTML = '';
+            document.querySelector('#income-table tbody').innerHTML = '';
+
+            if(exp) exp.forEach(item => renderRow('expenses', item));
+            if(inc) inc.forEach(item => renderRow('income', item));
+            calculateTotals();
+        }
+
+        function renderRow(type, data) {
+            const tbody = document.querySelector(`#${type}-table tbody`);
+            const row = tbody.insertRow();
+            row.dataset.id = data.id;
+
+            if (type === 'expenses') {
+                row.innerHTML = `
+                    <td><input type="text" class="name-input" value="${data.name || ''}"></td>
+                    <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
+                    <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
+                    <td class="row-rem">0</td>
+                    <td><button class="remove-btn">🗑️</button></td>`;
+            } else {
+                row.innerHTML = `
+                    <td><input type="text" class="source-input" value="${data.source || ''}"></td>
+                    <td><input type="text" class="num-input amount-input" value="${fmt(data.amount)}"></td>
+                    <td><button class="remove-btn">🗑️</button></td>`;
+            }
+
+            // Add Event Listeners to inputs
+            row.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', () => syncRow(type, row));
+            });
+            row.querySelector('.remove-btn').addEventListener('click', () => deleteRow(type, data.id, row));
+        }
+
+        async function addRow(type) {
+            const newObj = type === 'expenses' ? { name: '', spent: 0, goal: 0 } : { source: '', amount: 0 };
+            const { data, error } = await db.from(type).insert([newObj]).select();
+            if (error) console.error(error);
+            if (data) renderRow(type, data[0]);
+        }
+
+        async function syncRow(type, row) {
+            const id = row.dataset.id;
+            let updates = {};
+            
+            if (type === 'expenses') {
+                const s = parse(row.querySelector('.spent-input').value);
+                const g = parse(row.querySelector('.goal-input').value);
+                updates = {
+                    name: row.querySelector('.name-input').value,
+                    spent: s,
+                    goal: g
+                };
+                row.querySelector('.spent-input').value = fmt(s);
+                row.querySelector('.goal-input').value = fmt(g);
+            } else {
+                const a = parse(row.querySelector('.amount-input').value);
+                updates = {
+                    source: row.querySelector('.source-input').value,
+                    amount: a
+                };
+                row.querySelector('.amount-input').value = fmt(a);
+            }
+
+            await db.from(type).update(updates).eq('id', id);
+            calculateTotals();
+        }
+
+        async function deleteRow(table, id, rowElement) {
+            await db.from(table).delete().eq('id', id);
+            rowElement.remove();
+            calculateTotals();
+        }
+
+        function calculateTotals() {
+            let totalInc = 0, totalSpent = 0, totalRem = 0;
+            
+            document.querySelectorAll('#income-table tbody tr').forEach(r => {
+                totalInc += parse(r.querySelector('.amount-input').value);
+            });
+            
+            document.querySelectorAll('#expenses-table tbody tr').forEach(r => {
+                const spent = parse(r.querySelector('.spent-input').value);
+                const goal = parse(r.querySelector('.goal-input').value);
+                const left = goal - spent;
+                
+                const remCell = r.querySelector('.row-rem');
+                remCell.textContent = fmt(left);
+                remCell.className = 'row-rem ' + (left < 0 ? 'over-budget-text' : (left === 0 && goal > 0 ? 'under-budget-text' : ''));
+                
+                totalSpent += spent;
+                totalRem += left;
+            });
+
+            document.getElementById('total-income').textContent = fmt(totalInc);
+            document.getElementById('total-spent').textContent = fmt(totalSpent);
+            document.getElementById('total-remaining').textContent = fmt(totalRem);
+            
+            const balance = totalInc - totalSpent;
+            const balEl = document.getElementById('net-balance');
+            balEl.textContent = fmt(balance);
+            balEl.className = 'summary-value ' + (balance >= 0 ? 'surplus' : 'deficit');
+        }
+
+        // Attach listeners to buttons
+        document.getElementById('btn-add-exp').onclick = () => addRow('expenses');
+        document.getElementById('btn-add-inc').onclick = () => addRow('income');
+
+        // Initial Load
+        loadData();
+    </script>
+</body>
+</html>
