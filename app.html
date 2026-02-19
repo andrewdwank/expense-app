@@ -261,7 +261,7 @@
             // document.getElementById('total-spent').textContent = fmt(totalSpent);
             document.getElementById('total-remaining').textContent = fmt(totalRem);
             
-            const balance = totalInc - totalSpent;
+            const balance = totalInc - totalRem;
             const balEl = document.getElementById('net-balance');
             balEl.textContent = fmt(balance);
             balEl.className = 'summary-value ' + (balance >= 0 ? 'surplus' : 'deficit');
