@@ -82,7 +82,9 @@
         }
         
         .summary-section { padding: 10px; background: #0f172a; color: white; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .summary-grid { display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 6px;}
         .summary-card { background: rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 4px; text-align: center; }
         .summary-label { font-size: 0.6rem; opacity: 0.6; display: block; margin-bottom: 1px; }
         .summary-value { font-size: 0.95rem; font-weight: 700; font-family: monospace; }
@@ -139,10 +141,10 @@
         </div>
         <section class="summary-section">
             <div class="summary-grid">
-                <div class="summary-card"><span>Income</span><div class="summary-value" id="total-income">0</div></div>
-                <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div>
-                <div class="summary-card"><span>Left</span><div class="summary-value" id="total-remaining">0</div></div>
-                <div class="summary-card"><span>Balance</span><div class="summary-value" id="net-balance">0</div></div>
+                <div class="summary-card"><span>Sisa income</span><div class="summary-value" id="total-income">0</div></div>
+                <!-- <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div> -->
+                <div class="summary-card"><span>Yang masih harus dibayar</span><div class="summary-value" id="total-remaining">0</div></div>
+                <div class="summary-card"><span>Prediksi lebih/Kurang</span><div class="summary-value" id="net-balance">0</div></div>
             </div>
         </section>
     </div>
@@ -256,7 +258,7 @@
             });
 
             document.getElementById('total-income').textContent = fmt(totalInc);
-            document.getElementById('total-spent').textContent = fmt(totalSpent);
+            // document.getElementById('total-spent').textContent = fmt(totalSpent);
             document.getElementById('total-remaining').textContent = fmt(totalRem);
             
             const balance = totalInc - totalSpent;
