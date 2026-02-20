@@ -209,34 +209,57 @@
             calculateTotals();
         }
 
-        function renderRow(type, data) {
-            const tbody = document.querySelector(`#${type}-table tbody`);
-            const row = tbody.insertRow();
-            row.dataset.id = data.id;
-
-            // <td><input type="text" class="name-input" value="${data.name || ''}"></td>
-
-            if (type === 'expenses') {
-                row.innerHTML = `
-                    
-                    <td><textarea class="name-input">${data.name || ''}</textarea></td>
-                    <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
-                    <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
-                    <td class="row-rem">0</td>
-                    <td><button class="remove-btn">🗑️</button></td>`;
-            } else {
-                row.innerHTML = `
-                    <td><input type="text" class="source-input" value="${data.source || ''}"></td>
-                    <td><input type="text" class="num-input amount-input" value="${fmt(data.amount)}"></td>
-                    <td><button class="remove-btn">🗑️</button></td>`;
-            }
-
-            // Add Event Listeners to inputs
-            row.querySelectorAll('input').forEach(input => {
-                input.addEventListener('change', () => syncRow(type, row));
-            });
-            row.querySelector('.remove-btn').addEventListener('click', () => deleteRow(type, data.id, row));
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
         }
+
+
+        function renderRow(type, data) {
+    const tbody = document.querySelector(`#${type}-table tbody`);
+    const row = tbody.insertRow();
+    row.dataset.id = data.id;
+
+    // Create HTML with textarea for flexible text and numeric inputs
+    if (type === 'expenses') {
+        row.innerHTML = `
+            <td><textarea class="name-input">${data.name || ''}</textarea></td>
+            <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
+            <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
+            <td class="row-rem">0</td>
+            <td><button class="remove-btn">🗑️</button></td>`;
+    } else {
+        row.innerHTML = `
+            <td><textarea class="source-input">${data.source || ''}</textarea></td>
+            <td><input type="text" class="num-input amount-input" value="${fmt(data.amount)}"></td>
+            <td><button class="remove-btn">🗑️</button></td>`;
+    }
+
+    // Auto-resize textarea function
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = '24px'; // Reset to your desired base height first
+        const newHeight = textarea.scrollHeight;
+        // Only apply scrollHeight if it's larger than our base 24px
+        textarea.style.height = (newHeight > 24 ? newHeight : 24) + 'px';
+    }
+
+    // Attach listeners to all inputs
+    row.querySelectorAll('input').forEach(input => {
+        input.addEventListener('change', () => syncRow(type, row));
+    });
+
+    row.querySelectorAll('textarea').forEach(textarea => {
+        textarea.addEventListener('input', () => {
+            autoResizeTextarea(textarea);
+            syncRow(type, row);
+        });
+        // Initial auto-resize
+        autoResizeTextarea(textarea);
+    });
+
+    // Remove row
+    row.querySelector('.remove-btn').addEventListener('click', () => deleteRow(type, data.id, row));
+}
 
         async function addRow(type) {
             const newObj = type === 'expenses' ? { name: '', spent: 0, goal: 0 } : { source: '', amount: 0 };
