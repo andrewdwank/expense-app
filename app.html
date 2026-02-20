@@ -81,7 +81,14 @@
             cursor: pointer; font-size: 0.7rem; width: 100%; margin-top: 5px;
         }
         
-        .summary-section { padding: 10px; background: #0f172a; color: white; }
+        .summary-section {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 10px;
+            background: #0f172a;
+            color: white; 
+        }
         .summary-grid { display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 6px;}
@@ -121,6 +128,16 @@
 <body>
     <div class="container">
         <header><h1>Finance Tracker Cloud</h1></header>
+
+        <section class="summary-section">
+            <div class="summary-grid">
+                <div class="summary-card"><span>Sisa income</span><div class="summary-value" id="total-income">0</div></div>
+                <!-- <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div> -->
+                <div class="summary-card"><span>Yang masih harus dibayar</span><div class="summary-value" id="total-remaining">0</div></div>
+                <div class="summary-card"><span>Prediksi lebih/Kurang</span><div class="summary-value" id="net-balance">0</div></div>
+            </div>
+        </section>
+
         <div class="tables-container">
             <section class="table-section">
                 <h2 style="color: #f72585;">💸 Expenses</h2>
@@ -147,14 +164,7 @@
                 <button id="btn-add-inc" class="add-row">+ Add Income</button>
             </section>
         </div>
-        <section class="summary-section">
-            <div class="summary-grid">
-                <div class="summary-card"><span>Sisa income</span><div class="summary-value" id="total-income">0</div></div>
-                <!-- <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div> -->
-                <div class="summary-card"><span>Yang masih harus dibayar</span><div class="summary-value" id="total-remaining">0</div></div>
-                <div class="summary-card"><span>Prediksi lebih/Kurang</span><div class="summary-value" id="net-balance">0</div></div>
-            </div>
-        </section>
+        
     </div>
 
     <script>
