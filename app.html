@@ -24,7 +24,6 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            /* overflow: hidden; */
         }
         
         header {
@@ -35,6 +34,11 @@
         }
         
         h1 { font-size: 1.1rem; }
+        header h5 {
+            font-style: italic;
+            font-weight: normal;
+            opacity: 0.8;
+        }
         .subtitle { opacity: 0.8; font-size: 0.7rem; }
         
         .tables-container {
@@ -69,6 +73,19 @@
             font-family: 'Courier New', monospace;
         }
 
+        textarea {
+            width: 100%;
+            padding: 3px 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-family: 'Courier New', monospace;
+            resize: vertical;       /* user can drag to resize */
+            min-height: 24px;       /* default height */
+            line-height: 1.2;
+            overflow-wrap: break-word; /* wrap long words */
+        }
+
         .num-input { text-align: right; }
         
         .remove-btn {
@@ -89,12 +106,7 @@
             background: #0f172a;
             color: white; 
 
-            /* position: sticky;
-            top: 0;
-            z-index: 999;
-            padding: 10px;
-            background: #0f172a;
-            color: white; */
+           
         }
         .summary-grid { display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -134,14 +146,15 @@
 </head>
 <body>
     <div class="container">
-        <header><h1>Finance Tracker Cloud</h1></header>
+        <header><h1>Finance Tracker Bapak</h1>
+        <h5>*input dalam ribuan</h5></header>
 
         <section class="summary-section">
             <div class="summary-grid">
-                <div class="summary-card"><span>Sisa income</span><div class="summary-value" id="total-income">0</div></div>
+                <div class="summary-card"><span>Yang Ada</span><div class="summary-value" id="total-income">0</div></div>
                 <!-- <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div> -->
                 <div class="summary-card"><span>Yang masih harus dibayar</span><div class="summary-value" id="total-remaining">0</div></div>
-                <div class="summary-card"><span>Prediksi lebih/Kurang</span><div class="summary-value" id="net-balance">0</div></div>
+                <div class="summary-card"><span>Prediksi lebih/Kurang <br>akhir bulan</span><div class="summary-value" id="net-balance">0</div></div>
             </div>
         </section>
 
@@ -152,9 +165,9 @@
                     <thead>
                         <tr>
                         <th style="width:35%">Item</th>
-                        <th style="width:22%">Goal</th>
-                        <th style="width:22%">Spent</th>
-                        <th style="width:16%">Left</th>
+                        <th style="width:22%">Keperluan</th>
+                        <th style="width:22%">Yg Sdh Keluar</th>
+                        <th style="width:16%">Yg Msh Hrs Keluar</th>
                         <th style="width:5%"></th>
                         </tr>
                     </thead>
@@ -201,9 +214,12 @@
             const row = tbody.insertRow();
             row.dataset.id = data.id;
 
+            // <td><input type="text" class="name-input" value="${data.name || ''}"></td>
+
             if (type === 'expenses') {
                 row.innerHTML = `
-                    <td><input type="text" class="name-input" value="${data.name || ''}"></td>
+                    
+                    <td><textarea class="name-input">${data.name || ''}</textarea></td>
                     <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
                     <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
                     <td class="row-rem">0</td>
@@ -282,13 +298,13 @@
                 totalRem += left;
             });
 
-            document.getElementById('total-income').textContent = fmt(totalInc);
+            document.getElementById('total-income').textContent = fmt(totalInc * 1000);
             // document.getElementById('total-spent').textContent = fmt(totalSpent);
-            document.getElementById('total-remaining').textContent = fmt(totalRem);
+            document.getElementById('total-remaining').textContent = fmt(totalRem * 1000);
             
             const balance = totalInc - totalRem;
             const balEl = document.getElementById('net-balance');
-            balEl.textContent = fmt(balance);
+            balEl.textContent = fmt(balance * 1000);
             balEl.className = 'summary-value ' + (balance >= 0 ? 'surplus' : 'deficit');
         }
 
