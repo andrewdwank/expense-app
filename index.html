@@ -1,11 +1,13 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Finance Tracker - Clean View</title>
+    <title>Finance Tracker - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+       * { box-sizing: border-box; margin: 0; padding: 0; }
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -22,7 +24,6 @@
             background: white;
             border-radius: 8px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
         }
         
         header {
@@ -33,6 +34,11 @@
         }
         
         h1 { font-size: 1.1rem; }
+        header h5 {
+            font-style: italic;
+            font-weight: normal;
+            opacity: 0.8;
+        }
         .subtitle { opacity: 0.8; font-size: 0.7rem; }
         
         .tables-container {
@@ -67,6 +73,19 @@
             font-family: 'Courier New', monospace;
         }
 
+        textarea {
+            width: 100%;
+            padding: 3px 5px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 0.65rem;
+            font-family: 'Courier New', monospace;
+            resize: vertical;       /* user can drag to resize */
+            min-height: 24px;       /* default height */
+            line-height: 1.2;
+            overflow-wrap: break-word; /* wrap long words */
+        }
+
         .num-input { text-align: right; }
         
         .remove-btn {
@@ -79,8 +98,19 @@
             cursor: pointer; font-size: 0.7rem; width: 100%; margin-top: 5px;
         }
         
-        .summary-section { padding: 10px; background: #0f172a; color: white; }
-        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .summary-section {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 10px;
+            background: #0f172a;
+            color: white; 
+
+           
+        }
+        .summary-grid { display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 6px;}
         .summary-card { background: rgba(255, 255, 255, 0.05); padding: 6px 2px; border-radius: 4px; text-align: center; }
         .summary-label { font-size: 0.6rem; opacity: 0.6; display: block; margin-bottom: 1px; }
         .summary-value { font-size: 0.95rem; font-weight: 700; font-family: monospace; }
@@ -112,173 +142,201 @@
             }
         }
 
-
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Finance Tracker</h1>
-            <p class="subtitle">Thousand separator enabled • Clean decimals</p>
-        </header>
-        
+        <header><h1>Finance Tracker Bapak</h1>
+        <h5>*input dalam ribuan</h5></header>
+
+        <section class="summary-section">
+            <div class="summary-grid">
+                <div class="summary-card"><span>Yang Ada</span><div class="summary-value" id="total-income">0</div></div>
+                <!-- <div class="summary-card"><span>Spent</span><div class="summary-value" id="total-spent">0</div></div> -->
+                <div class="summary-card"><span>Yang masih harus dibayar</span><div class="summary-value" id="total-remaining">0</div></div>
+                <div class="summary-card"><span>Prediksi lebih/Kurang <br>akhir bulan</span><div class="summary-value" id="net-balance">0</div></div>
+            </div>
+        </section>
+
         <div class="tables-container">
             <section class="table-section">
                 <h2 style="color: #f72585;">💸 Expenses</h2>
                 <table id="expenses-table">
                     <thead>
                         <tr>
-                            <th class="col-item">Expense</th>
-                            <th class="col-spent">Spent</th>
-                            <th class="col-total">Goal</th>
-                            <th class="col-rem">Left</th>
-                            <th class="col-act"></th>
+                        <th style="width:35%">Item</th>
+                        <th style="width:22%">Keperluan</th>
+                        <th style="width:22%">Yg Sdh Keluar</th>
+                        <th style="width:16%">Yg Msh Hrs Keluar</th>
+                        <th style="width:5%"></th>
                         </tr>
                     </thead>
-                    <tbody>
-                        <tr>
-                            <td><input type="text" value="Gas"></td>
-                            <td><input type="text" class="num-input expense-spent" value="1,500"></td>
-                            <td><input type="text" class="num-input expense-total" value="5,000"></td>
-                            <td class="row-rem">3,500</td>
-                            <td><button class="remove-btn">🗑️</button></td>
-                        </tr>
-                    </tbody>
+                    <tbody></tbody>
                 </table>
-                <button id="add-expense" class="add-row">+ Add Expense</button>
+                <button id="btn-add-exp" class="add-row">+ Add Expense</button>
             </section>
-            
             <section class="table-section">
                 <h2 style="color: #4cc9f0;">💰 Income</h2>
                 <table id="income-table">
-                    <thead>
-                        <tr>
-                            <th class="col-item">Source</th>
-                            <th class="col-total">Amount</th>
-                            <th style="width:10%"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td><input type="text" value="Salary"></td>
-                            <td><input type="text" class="num-input income-amount" value="8,000"></td>
-                            <td><button class="remove-btn">🗑️</button></td>
-                        </tr>
-                    </tbody>
+                    <thead><tr><th style="width:35%">Source</th><th style="width:55%">Amount</th><th style="width:10%"></th></tr></thead>
+                    <tbody></tbody>
                 </table>
-                <button id="add-income" class="add-row">+ Add Income</button>
+                <button id="btn-add-inc" class="add-row">+ Add Income</button>
             </section>
         </div>
-
-        <!-- anon key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoeG5jdXh1eWpheWxmZ2l2cG1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5OTY4MzAsImV4cCI6MjA4NTU3MjgzMH0.uPZTokMuCsZQLl1anqckbUcCQxDRTNsJ9SAvQ5VBBLQ 
         
-        https://phxncuxuyjaylfgivpmf.supabase.co
-        -->
-        
-        <section class="summary-section">
-            <div class="summary-grid">
-                <div class="summary-card">
-                    <span class="summary-label">Income</span>
-                    <div class="summary-value" id="total-income">0</div>
-                </div>
-                <div class="summary-card">
-                    <span class="summary-label">Paid Out</span>
-                    <div class="summary-value" id="total-spent">0</div>
-                </div>
-                <div class="summary-card">
-                    <span class="summary-label">Rem. Budget</span>
-                    <div class="summary-value rem-color" id="total-remaining">0</div>
-                </div>
-                <div class="summary-card">
-                    <span class="summary-label">Balance</span>
-                    <div class="summary-value surplus" id="net-balance">0</div>
-                </div>
-            </div>
-        </section>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const fmt = (n) => Math.round(n).toLocaleString();
-            const parse = (s) => parseFloat(s.replace(/,/g, '')) || 0;
+        const SB_URL = 'https://phxncuxuyjaylfgivpmf.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBoeG5jdXh1eWpheWxmZ2l2cG1mIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk5OTY4MzAsImV4cCI6MjA4NTU3MjgzMH0.uPZTokMuCsZQLl1anqckbUcCQxDRTNsJ9SAvQ5VBBLQ';
+        
+        // Rename connection to 'db' to avoid conflict with the library 'supabase'
+        const db = supabase.createClient(SB_URL, SB_KEY);
 
-            function updateInputFormatting(el) {
-                let val = el.value.replace(/,/g, '');
-                if(!isNaN(val) && val !== "") {
-                    el.value = parseFloat(val).toLocaleString();
-                }
-            }
+        const fmt = (n) => Math.round(n).toLocaleString();
+        const parse = (s) => parseFloat(String(s).replace(/,/g, '')) || 0;
 
-            function addExpenseRow() {
-                const row = document.querySelector('#expenses-table tbody').insertRow();
-                row.innerHTML = `<td><input type="text" placeholder="Item"></td>
-                    <td><input type="text" class="num-input expense-spent" value="0"></td>
-                    <td><input type="text" class="num-input expense-total" value="0"></td>
-                    <td class="row-rem">0</td>
-                    <td><button class="remove-btn">🗑️</button></td>`;
-                calculateTotals();
-            }
-
-            document.getElementById('add-expense').addEventListener('click', addExpenseRow);
-            document.getElementById('add-income').addEventListener('click', () => {
-                const row = document.querySelector('#income-table tbody').insertRow();
-                row.innerHTML = `<td><input type="text" placeholder="Source"></td>
-                    <td><input type="text" class="num-input income-amount" value="0"></td>
-                    <td><button class="remove-btn">🗑️</button></td>`;
-                calculateTotals();
-            });
-
-            document.addEventListener('click', e => {
-                if (e.target.closest('.remove-btn')) {
-                    e.target.closest('tr').remove();
-                    calculateTotals();
-                }
-            });
-
-            document.addEventListener('input', e => {
-                if (e.target.classList.contains('num-input')) {
-                    updateInputFormatting(e.target);
-                }
-                calculateTotals();
-            });
-
-            function calculateTotals() {
-                let totalInc = 0, totalSpent = 0, totalRem = 0;
-                
-                document.querySelectorAll('.income-amount').forEach(i => totalInc += parse(i.value));
-                
-                document.querySelectorAll('#expenses-table tbody tr').forEach(r => {
-                    const spent = parse(r.querySelector('.expense-spent').value);
-                    const budget = parse(r.querySelector('.expense-total').value);
-                    const left = budget - spent;
-                    
-                    const remCell = r.querySelector('.row-rem');
-                    remCell.textContent = fmt(left);
-                    
-                    if (left < 0) remCell.className = 'row-rem over-budget-text';
-                    else if (left === 0 && budget > 0) remCell.className = 'row-rem under-budget-text';
-                    else remCell.className = 'row-rem';
-
-                    totalSpent += spent;
-                    totalRem += left;
-                });
-                
-                const balance = totalInc - totalSpent;
-                
-                document.getElementById('total-income').textContent = fmt(totalInc);
-                document.getElementById('total-spent').textContent = fmt(totalSpent);
-                
-                const remSummary = document.getElementById('total-remaining');
-                remSummary.textContent = (totalRem < 0 ? '-' : '') + fmt(Math.abs(totalRem));
-                remSummary.className = 'summary-value ' + (totalRem < 0 ? 'deficit' : 'rem-color');
-                
-                const balEl = document.getElementById('net-balance');
-                balEl.textContent = (balance < 0 ? '-' : '') + fmt(Math.abs(balance));
-                balEl.className = 'summary-value ' + (balance >= 0 ? 'surplus' : 'deficit');
-            }
+        async function loadData() {
+            const { data: exp } = await db.from('expenses').select('*').order('created_at');
+            const { data: inc } = await db.from('income').select('*').order('created_at');
             
+            document.querySelector('#expenses-table tbody').innerHTML = '';
+            document.querySelector('#income-table tbody').innerHTML = '';
+
+            if(exp) exp.forEach(item => renderRow('expenses', item));
+            if(inc) inc.forEach(item => renderRow('income', item));
             calculateTotals();
+        }
+
+        function autoResizeTextarea(textarea) {
+            textarea.style.height = 'auto';
+            textarea.style.height = textarea.scrollHeight + 'px';
+        }
+
+
+        function renderRow(type, data) {
+    const tbody = document.querySelector(`#${type}-table tbody`);
+    const row = tbody.insertRow();
+    row.dataset.id = data.id;
+
+    // Create HTML with textarea for flexible text and numeric inputs
+    if (type === 'expenses') {
+        row.innerHTML = `
+            <td><textarea class="name-input">${data.name || ''}</textarea></td>
+            <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
+            <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
+            <td class="row-rem">0</td>
+            <td><button class="remove-btn">🗑️</button></td>`;
+    } else {
+        row.innerHTML = `
+            <td><textarea class="source-input">${data.source || ''}</textarea></td>
+            <td><input type="text" class="num-input amount-input" value="${fmt(data.amount)}"></td>
+            <td><button class="remove-btn">🗑️</button></td>`;
+    }
+
+    // Auto-resize textarea function
+    function autoResizeTextarea(textarea) {
+        textarea.style.height = '24px'; // Reset to your desired base height first
+        const newHeight = textarea.scrollHeight;
+        // Only apply scrollHeight if it's larger than our base 24px
+        textarea.style.height = (newHeight > 24 ? newHeight : 24) + 'px';
+    }
+
+    // Attach listeners to all inputs
+    row.querySelectorAll('input').forEach(input => {
+        input.addEventListener('change', () => syncRow(type, row));
+    });
+
+    row.querySelectorAll('textarea').forEach(textarea => {
+        textarea.addEventListener('input', () => {
+            autoResizeTextarea(textarea);
+            syncRow(type, row);
         });
+        // Initial auto-resize
+        autoResizeTextarea(textarea);
+    });
+
+    // Remove row
+    row.querySelector('.remove-btn').addEventListener('click', () => deleteRow(type, data.id, row));
+}
+
+        async function addRow(type) {
+            const newObj = type === 'expenses' ? { name: '', spent: 0, goal: 0 } : { source: '', amount: 0 };
+            const { data, error } = await db.from(type).insert([newObj]).select();
+            if (error) console.error(error);
+            if (data) renderRow(type, data[0]);
+        }
+
+        async function syncRow(type, row) {
+            const id = row.dataset.id;
+            let updates = {};
+            
+            if (type === 'expenses') {
+                const s = parse(row.querySelector('.spent-input').value);
+                const g = parse(row.querySelector('.goal-input').value);
+                updates = {
+                    name: row.querySelector('.name-input').value,
+                    spent: s,
+                    goal: g
+                };
+                row.querySelector('.spent-input').value = fmt(s);
+                row.querySelector('.goal-input').value = fmt(g);
+            } else {
+                const a = parse(row.querySelector('.amount-input').value);
+                updates = {
+                    source: row.querySelector('.source-input').value,
+                    amount: a
+                };
+                row.querySelector('.amount-input').value = fmt(a);
+            }
+
+            await db.from(type).update(updates).eq('id', id);
+            calculateTotals();
+        }
+
+        async function deleteRow(table, id, rowElement) {
+            await db.from(table).delete().eq('id', id);
+            rowElement.remove();
+            calculateTotals();
+        }
+
+        function calculateTotals() {
+            let totalInc = 0, totalSpent = 0, totalRem = 0;
+            
+            document.querySelectorAll('#income-table tbody tr').forEach(r => {
+                totalInc += parse(r.querySelector('.amount-input').value);
+            });
+            
+            document.querySelectorAll('#expenses-table tbody tr').forEach(r => {
+                const spent = parse(r.querySelector('.spent-input').value);
+                const goal = parse(r.querySelector('.goal-input').value);
+                const left = goal - spent;
+                
+                const remCell = r.querySelector('.row-rem');
+                remCell.textContent = fmt(left);
+                remCell.className = 'row-rem ' + (left < 0 ? 'over-budget-text' : (left === 0 && goal > 0 ? 'under-budget-text' : ''));
+                
+                totalSpent += spent;
+                totalRem += left;
+            });
+
+            document.getElementById('total-income').textContent = fmt(totalInc * 1000);
+            // document.getElementById('total-spent').textContent = fmt(totalSpent);
+            document.getElementById('total-remaining').textContent = fmt(totalRem * 1000);
+            
+            const balance = totalInc - totalRem;
+            const balEl = document.getElementById('net-balance');
+            balEl.textContent = fmt(balance * 1000);
+            balEl.className = 'summary-value ' + (balance >= 0 ? 'surplus' : 'deficit');
+        }
+
+        // Attach listeners to buttons
+        document.getElementById('btn-add-exp').onclick = () => addRow('expenses');
+        document.getElementById('btn-add-inc').onclick = () => addRow('income');
+
+        // Initial Load
+        loadData();
     </script>
 </body>
 </html>
