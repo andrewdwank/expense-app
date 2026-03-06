@@ -194,8 +194,8 @@
         // Rename connection to 'db' to avoid conflict with the library 'supabase'
         const db = supabase.createClient(SB_URL, SB_KEY);
 
-        const fmt = (n) => Math.round(n).toLocaleString();
-        const parse = (s) => parseFloat(String(s).replace(/,/g, '')) || 0;
+        const fmt = (n) => Math.round(n).toLocaleString('en-US');
+        const parse = (s) => parseFloat(String(s).replace(/[.,]/g, '')) || 0;
 
         async function loadData() {
             const { data: exp } = await db.from('expenses').select('*').order('created_at');
