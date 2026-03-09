@@ -334,6 +334,9 @@
         // Attach listeners to buttons
         document.getElementById('btn-add-exp').onclick = () => addRow('expenses');
         document.getElementById('btn-add-inc').onclick = () => addRow('income');
+        document.querySelectorAll('textarea').forEach(el => {
+            el.setAttribute('spellcheck', 'false');
+            });
 
         // Initial Load
         loadData();
