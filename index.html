@@ -108,6 +108,8 @@
 
            
         }
+
+
         .summary-grid { display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 6px;}
@@ -223,14 +225,14 @@
     // Create HTML with textarea for flexible text and numeric inputs
     if (type === 'expenses') {
         row.innerHTML = `
-            <td><textarea class="name-input">${data.name || ''}</textarea></td>
+            <td><textarea class="name-input" spellcheck="false">${data.name || ''}</textarea></td>
             <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
             <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
             <td class="row-rem">0</td>
             <td><button class="remove-btn">🗑️</button></td>`;
     } else {
         row.innerHTML = `
-            <td><textarea class="source-input">${data.source || ''}</textarea></td>
+            <td><textarea class="source-input" spellcheck="false">${data.source || ''}</textarea></td>
             <td><input type="text" class="num-input amount-input" value="${fmt(data.amount)}"></td>
             <td><button class="remove-btn">🗑️</button></td>`;
     }
