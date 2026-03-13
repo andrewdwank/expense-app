@@ -18,6 +18,22 @@
             font-size: 11px;
         }
         
+
+        #loading-overlay {
+            position: fixed;
+            top: 35%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(30, 41, 59, 0.9);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-weight: bold;
+            z-index: 1000;
+            display: none; /* Hidden by default */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
         .container {
             max-width: 950px;
             margin: 0 auto;
@@ -131,6 +147,20 @@
         .col-rem { width: 16%; }
         .col-act { width: 5%; }
 
+        .copy-btn {
+                background: #25d366;
+                color: white;
+                border: none;
+                padding: 10px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-weight: bold;
+                width: 100%;
+                margin-top: 15px;
+                font-size: 0.8rem;
+            }
+            .copy-btn:active { background: #128c7e; }
+
         @media (max-width: 650px) { .summary-grid { grid-template-columns: repeat(2, 1fr); } }
 
 
@@ -147,6 +177,7 @@
     </style>
 </head>
 <body>
+    <div id="loading-overlay">Loading data...</div>
     <div class="container">
         <header><h1>Finance Tracker Bapak</h1>
         <h5>*input dalam ribuan</h5></header>
@@ -186,7 +217,7 @@
                 <button id="btn-add-inc" class="add-row">+ Add Income</button>
             </section>
         </div>
-        
+        <button id="btn-copy-wa" class="copy-btn">Copy for WhatsApp 📟</button>
     </div>
 
     <script>
@@ -200,15 +231,24 @@
         const parse = (s) => parseFloat(String(s).replace(/[.,]/g, '')) || 0;
 
         async function loadData() {
-            const { data: exp } = await db.from('expenses').select('*').order('created_at');
-            const { data: inc } = await db.from('income').select('*').order('created_at');
-            
-            document.querySelector('#expenses-table tbody').innerHTML = '';
-            document.querySelector('#income-table tbody').innerHTML = '';
+            const loader = document.getElementById('loading-overlay');
+            loader.style.display = 'block'; // Show loader
 
-            if(exp) exp.forEach(item => renderRow('expenses', item));
-            if(inc) inc.forEach(item => renderRow('income', item));
-            calculateTotals();
+            try {
+                const { data: exp } = await db.from('expenses').select('*').order('created_at');
+                const { data: inc } = await db.from('income').select('*').order('created_at');
+                
+                document.querySelector('#expenses-table tbody').innerHTML = '';
+                document.querySelector('#income-table tbody').innerHTML = '';
+
+                if(exp) exp.forEach(item => renderRow('expenses', item));
+                if(inc) inc.forEach(item => renderRow('income', item));
+                calculateTotals();
+            } catch (err) {
+                console.error("Error loading:", err);
+            } finally {
+                loader.style.display = 'none'; // Hide loader
+            }
         }
 
         function autoResizeTextarea(textarea) {
@@ -339,6 +379,43 @@
         document.querySelectorAll('textarea').forEach(el => {
             el.setAttribute('spellcheck', 'false');
             });
+
+        document.getElementById('btn-copy-wa').onclick = function() {
+        let text = "*📊 FINANCE TRACKER BAPAK*\n\n";
+        
+        // Summary Section
+        text += `💰 *Yang Ada:* ${document.getElementById('total-income').textContent}\n`;
+        text += `💸 *Blm Keluar:* ${document.getElementById('total-remaining').textContent}\n`;
+        text += `🏁 *Prediksi Sisa Akhir Bulan:* ${document.getElementById('net-balance').textContent}\n\n`;
+
+        text += "*--- RINCIAN PENGELUARAN ---*\n";
+        document.querySelectorAll('#expenses-table tbody tr').forEach(row => {
+            const name = row.querySelector('.name-input').value || "Item";
+            const goal = row.querySelector('.goal-input').value;
+            const spent = row.querySelector('.spent-input').value;
+            const rem = row.querySelector('.row-rem').textContent;
+            text += `• ${name}: (Target ${goal}, Sdh Bayar ${spent}) -> *Blm Keluar: ${rem}*\n`;
+        });
+
+        text += "\n*--- SUMBER DANA ---*\n";
+        document.querySelectorAll('#income-table tbody tr').forEach(row => {
+            const source = row.querySelector('.source-input').value || "Sumber";
+            const amt = row.querySelector('.amount-input').value;
+            text += `• ${source}: ${amt}\n`;
+        });
+
+        // Copy to Clipboard
+        navigator.clipboard.writeText(text).then(() => {
+            const originalText = this.innerText;
+            this.innerText = "✅ Copied to Clipboard!";
+            this.style.background = "#128c7e";
+            
+            setTimeout(() => {
+                this.innerText = originalText;
+                this.style.background = "#25d366";
+            }, 2000);
+        });
+    };
 
         // Initial Load
         loadData();
