@@ -338,9 +338,24 @@
         }
 
         async function deleteRow(table, id, rowElement) {
-            await db.from(table).delete().eq('id', id);
-            rowElement.remove();
-            calculateTotals();
+            // Check if the table is 'expenses' to show the warning
+            if (table === 'expenses') {
+                const itemName = rowElement.querySelector('.name-input').value || "this item";
+                const confirmed = confirm(`Are you sure you want to delete "${itemName}"?`);
+                
+                if (!confirmed) return; // Exit if user clicks 'Cancel'
+            }
+
+            // Proceed with deletion if confirmed or if it's an income row
+            const { error } = await db.from(table).delete().eq('id', id);
+            
+            if (error) {
+                console.error("Error deleting:", error);
+                alert("Failed to delete the item. Please try again.");
+            } else {
+                rowElement.remove();
+                calculateTotals();
+            }
         }
 
         function calculateTotals() {
