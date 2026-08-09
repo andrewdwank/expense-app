@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -397,20 +396,6 @@
 
         document.getElementById('btn-copy-wa').onclick = function() {
         let text = "*📊 FINANCE TRACKER BAPAK*\n\n";
-
-        // Select all text when a number input is focused
-        document.addEventListener('focus', (e) => {
-            if (e.target.classList.contains('num-input')) {
-                e.target.select();
-            }
-        }, true);
-
-        // Stop the click from collapsing the selection back to a cursor position
-        document.addEventListener('mouseup', (e) => {
-            if (e.target.classList.contains('num-input')) {
-                e.preventDefault();
-            }
-        }, true);
         
         // Summary Section
         text += `💰 *Yang Ada:* ${document.getElementById('total-income').textContent}\n`;
@@ -445,6 +430,21 @@
             }, 2000);
         });
     };
+
+        // Select all text in a number input as soon as it's focused
+        document.addEventListener('focus', (e) => {
+            if (e.target.classList.contains('num-input')) {
+                e.target.select();
+            }
+        }, true);
+
+        // Prevent the mouseup from the same click collapsing the selection
+        // back down to a cursor position (this is what was overriding .select())
+        document.addEventListener('mouseup', (e) => {
+            if (e.target.classList.contains('num-input')) {
+                e.preventDefault();
+            }
+        }, true);
 
         // Initial Load
         loadData();
