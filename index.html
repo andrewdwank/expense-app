@@ -397,6 +397,13 @@
 
         document.getElementById('btn-copy-wa').onclick = function() {
         let text = "*📊 FINANCE TRACKER BAPAK*\n\n";
+
+        // Select all text when a number input is focused
+        document.addEventListener('focus', (e) => {
+            if (e.target.classList.contains('num-input')) {
+                e.target.select();
+            }
+        }, true);
         
         // Summary Section
         text += `💰 *Yang Ada:* ${document.getElementById('total-income').textContent}\n`;
