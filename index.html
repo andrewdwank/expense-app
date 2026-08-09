@@ -102,6 +102,7 @@
         }
 
         .num-input { text-align: right; }
+        .num-input[readonly] { background: #f0f2f5; color: #555; cursor: not-allowed; }
         
         .remove-btn {
             background: none; border: none; cursor: pointer; color: #ff6b6b; font-size: 0.9rem;
@@ -216,6 +217,26 @@
                 <button id="btn-add-inc" class="add-row">+ Add Income</button>
             </section>
         </div>
+
+        <div class="tables-container">
+            <section class="table-section" style="flex-basis: 100%;">
+                <h2 style="color: #ff9f1c;">🧾 Rincian Pengeluaran Istri <span style="font-weight:normal; font-size:0.6rem; opacity:0.6;">(total masuk ke baris pertama Expenses)</span></h2>
+                <table id="wife-table">
+                    <thead>
+                        <tr>
+                        <th style="width:35%">Item</th>
+                        <th style="width:22%">Keperluan</th>
+                        <th style="width:22%">Yg Sdh Keluar</th>
+                        <th style="width:16%">Yg Msh Hrs Keluar</th>
+                        <th style="width:5%"></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <button id="btn-add-wife" class="add-row">+ Add Sub Item</button>
+            </section>
+        </div>
+
         <button id="btn-copy-wa" class="copy-btn">Copy for WhatsApp 📟</button>
     </div>
 
@@ -236,12 +257,17 @@
             try {
                 const { data: exp } = await db.from('expenses').select('*').order('created_at');
                 const { data: inc } = await db.from('income').select('*').order('created_at');
+                const { data: wife } = await db.from('wife_expenses').select('*').order('created_at');
                 
                 document.querySelector('#expenses-table tbody').innerHTML = '';
                 document.querySelector('#income-table tbody').innerHTML = '';
+                document.querySelector('#wife-table tbody').innerHTML = '';
 
                 if(exp) exp.forEach(item => renderRow('expenses', item));
                 if(inc) inc.forEach(item => renderRow('income', item));
+                if(wife) wife.forEach(item => renderWifeRow(item));
+
+                lockFirstExpenseRow();
                 calculateTotals();
             } catch (err) {
                 console.error("Error loading:", err);
@@ -357,7 +383,120 @@
             }
         }
 
+        function renderWifeRow(data) {
+            const tbody = document.querySelector('#wife-table tbody');
+            const row = tbody.insertRow();
+            row.dataset.id = data.id;
+
+            row.innerHTML = `
+                <td><textarea class="name-input" spellcheck="false">${data.name || ''}</textarea></td>
+                <td><input type="text" class="num-input goal-input" value="${fmt(data.goal)}"></td>
+                <td><input type="text" class="num-input spent-input" value="${fmt(data.spent)}"></td>
+                <td class="row-rem">0</td>
+                <td><button class="remove-btn">🗑️</button></td>`;
+
+            function autoResizeTextarea(textarea) {
+                textarea.style.height = '24px';
+                const newHeight = textarea.scrollHeight;
+                textarea.style.height = (newHeight > 24 ? newHeight : 24) + 'px';
+            }
+
+            row.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', () => syncWifeRow(row));
+            });
+
+            row.querySelectorAll('textarea').forEach(textarea => {
+                textarea.addEventListener('input', () => {
+                    autoResizeTextarea(textarea);
+                    syncWifeRow(row);
+                });
+                autoResizeTextarea(textarea);
+            });
+
+            row.querySelector('.remove-btn').addEventListener('click', () => deleteWifeRow(data.id, row));
+        }
+
+        async function addWifeRow() {
+            const { data, error } = await db.from('wife_expenses').insert([{ name: '', spent: 0, goal: 0 }]).select();
+            if (error) console.error(error);
+            if (data) renderWifeRow(data[0]);
+        }
+
+        async function syncWifeRow(row) {
+            const id = row.dataset.id;
+            const s = parse(row.querySelector('.spent-input').value);
+            const g = parse(row.querySelector('.goal-input').value);
+            const updates = {
+                name: row.querySelector('.name-input').value,
+                spent: s,
+                goal: g
+            };
+            row.querySelector('.spent-input').value = fmt(s);
+            row.querySelector('.goal-input').value = fmt(g);
+
+            await db.from('wife_expenses').update(updates).eq('id', id);
+            calculateTotals();
+        }
+
+        async function deleteWifeRow(id, rowElement) {
+            const itemName = rowElement.querySelector('.name-input').value || "this item";
+            const confirmed = confirm(`Are you sure you want to delete "${itemName}"?`);
+            if (!confirmed) return;
+
+            const { error } = await db.from('wife_expenses').delete().eq('id', id);
+            if (error) {
+                console.error("Error deleting:", error);
+                alert("Failed to delete the item. Please try again.");
+            } else {
+                rowElement.remove();
+                calculateTotals();
+            }
+        }
+
+        // The first row in the Expenses table is reserved for the wife's
+        // monthly total, so its goal/spent fields are auto-calculated from
+        // the "Rincian Pengeluaran Istri" section below and locked from
+        // manual editing.
+        function lockFirstExpenseRow() {
+            const firstRow = document.querySelector('#expenses-table tbody tr');
+            if (!firstRow) return;
+            firstRow.querySelector('.goal-input').setAttribute('readonly', 'true');
+            firstRow.querySelector('.spent-input').setAttribute('readonly', 'true');
+        }
+
+        async function syncFirstExpenseRowTotals(goalTotal, spentTotal) {
+            const firstRow = document.querySelector('#expenses-table tbody tr');
+            if (!firstRow) return;
+
+            firstRow.querySelector('.goal-input').value = fmt(goalTotal);
+            firstRow.querySelector('.spent-input').value = fmt(spentTotal);
+
+            const id = firstRow.dataset.id;
+            await db.from('expenses').update({ goal: goalTotal, spent: spentTotal }).eq('id', id);
+        }
+
         function calculateTotals() {
+            // Roll up the wife sub-items first, and push the sums into the
+            // first Expenses row before computing the overall totals.
+            let wifeGoal = 0, wifeSpent = 0;
+            document.querySelectorAll('#wife-table tbody tr').forEach(r => {
+                const spent = parse(r.querySelector('.spent-input').value);
+                const goal = parse(r.querySelector('.goal-input').value);
+                const left = goal - spent;
+
+                const remCell = r.querySelector('.row-rem');
+                remCell.textContent = fmt(left);
+                remCell.className = 'row-rem ' + (left < 0 ? 'over-budget-text' : (left === 0 && goal > 0 ? 'under-budget-text' : ''));
+
+                wifeGoal += goal;
+                wifeSpent += spent;
+            });
+            syncFirstExpenseRowTotals(wifeGoal, wifeSpent);
+
+            calculateExpenseAndIncomeTotals();
+        }
+
+        function calculateExpenseAndIncomeTotals() {
             let totalInc = 0, totalSpent = 0, totalRem = 0;
             
             document.querySelectorAll('#income-table tbody tr').forEach(r => {
@@ -390,6 +529,7 @@
         // Attach listeners to buttons
         document.getElementById('btn-add-exp').onclick = () => addRow('expenses');
         document.getElementById('btn-add-inc').onclick = () => addRow('income');
+        document.getElementById('btn-add-wife').onclick = () => addWifeRow();
         document.querySelectorAll('textarea').forEach(el => {
             el.setAttribute('spellcheck', 'false');
             });
