@@ -431,18 +431,36 @@
         });
     };
 
-        // Select all text in a number input as soon as it's focused
+        // Select all text in a number input as soon as it's focused.
+        // Works on desktop (mouse) and mobile (touch) alike.
+        function selectAllInInput(el) {
+            // A 0ms timeout pushes this to run *after* the browser's own
+            // tap-to-place-cursor behavior, so our selection wins instead
+            // of being immediately overridden.
+            setTimeout(() => {
+                el.setSelectionRange(0, el.value.length);
+            }, 0);
+        }
+
         document.addEventListener('focus', (e) => {
             if (e.target.classList.contains('num-input')) {
-                e.target.select();
+                selectAllInInput(e.target);
             }
         }, true);
 
-        // Prevent the mouseup from the same click collapsing the selection
-        // back down to a cursor position (this is what was overriding .select())
+        // Desktop: stop the click's mouseup from collapsing the selection
+        // back down to a cursor position.
         document.addEventListener('mouseup', (e) => {
             if (e.target.classList.contains('num-input')) {
                 e.preventDefault();
+            }
+        }, true);
+
+        // Mobile: re-select on touchend too, since some mobile browsers
+        // reposition the cursor after touch even once focused.
+        document.addEventListener('touchend', (e) => {
+            if (e.target.classList.contains('num-input')) {
+                selectAllInInput(e.target);
             }
         }, true);
 
