@@ -404,6 +404,13 @@
                 e.target.select();
             }
         }, true);
+
+        // Stop the click from collapsing the selection back to a cursor position
+        document.addEventListener('mouseup', (e) => {
+            if (e.target.classList.contains('num-input')) {
+                e.preventDefault();
+            }
+        }, true);
         
         // Summary Section
         text += `💰 *Yang Ada:* ${document.getElementById('total-income').textContent}\n`;
